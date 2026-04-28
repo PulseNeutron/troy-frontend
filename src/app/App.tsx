@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Camera, Sparkles, Building2, Brain, ArrowRight, X, MessageCircle, Phone, Menu, Eye, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
-import troyLogo from '../imports/troy_logo-1.jpeg';
+import troyLogo from '../imports/troy_logo.jpeg';
 import troyCastle2 from '../imports/troy_castle_2.jpg';
 import troyTower from '../imports/troy_tower.jpg';
 import troyBridge from '../imports/troy_bridge.jpg';
