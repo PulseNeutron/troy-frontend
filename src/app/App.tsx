@@ -166,15 +166,15 @@ export default function App() {
       card.color === 'cream'
         ? 'bg-[#FFF9F2] border-amber-100'
         : card.color === 'green'
-        ? 'bg-[#F0FDF4] border-emerald-100'
-        : 'bg-[#EFF6FF] border-blue-100';
+          ? 'bg-[#F0FDF4] border-emerald-100'
+          : 'bg-[#EFF6FF] border-blue-100';
 
     const iconClasses =
       card.color === 'cream'
         ? 'bg-amber-100 text-amber-700'
         : card.color === 'green'
-        ? 'bg-emerald-100 text-emerald-700'
-        : 'bg-blue-100 text-blue-700';
+          ? 'bg-emerald-100 text-emerald-700'
+          : 'bg-blue-100 text-blue-700';
 
     return (
       <motion.div
@@ -352,7 +352,7 @@ export default function App() {
             className="flex-1 flex flex-col items-center justify-center gap-5 w-full max-w-[320px] mx-auto"
           >
             <div className="text-center space-y-1.5">
-              <h2 className="text-2xl font-bold text-[#AE6A1C]">Take a Photo</h2>
+              <h2 className="text-2xl font-bold text-[#AE6A1C]">Take a Photo - Backend 4-1 Test</h2>
               <p className="text-sm text-gray-600 px-4">
                 Make sure the entire structure is visible and well-lit.
               </p>
