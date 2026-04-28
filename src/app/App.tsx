@@ -8,7 +8,7 @@ import troyBridge from '../imports/troy_bridge.jpg';
 import troyBridge2 from '../imports/troy_bridge_2.png';
 
 // CHANGE ONLY THIS IF BACKEND IP CHANGES
-const API_BASE = 'http://192.168.1.13:5000';
+const API_BASE = 'https://troy-backend-4.onrender.com';
 
 type AppState = 'home' | 'upload' | 'analyzing' | 'results';
 
