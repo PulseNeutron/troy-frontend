@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Camera, Sparkles, Building2, Brain, ArrowRight, X, MessageCircle, Phone, Menu, Eye, Lightbulb } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import troyLogo from '../imports/troy_logo-1.jpeg';
@@ -7,18 +7,27 @@ import troyTower from '../imports/troy_tower.jpg';
 import troyBridge from '../imports/troy_bridge.jpg';
 import troyBridge2 from '../imports/troy_bridge_2.png';
 
-// CHANGE ONLY THIS IF BACKEND IP CHANGES
 const API_BASE = 'https://troy-backend-4-2.onrender.com';
 
 type AppState = 'home' | 'upload' | 'analyzing' | 'results';
 
+interface WhatTheyLearned {
+  title: string;
+  description: string;
+  color: 'cream' | 'green' | 'blue';
+}
+
 interface AnalysisResult {
-  celebrationMessage: string;
+  imageStatus: 'valid' | 'invalid';
+  buildGuessTitle: string;
+  buildGuessSubtitle: string;
+  whatWeFoundSummary: string;
+  whatTheyLearned: WhatTheyLearned[];
   whatWeNoticed: string[];
-  creativityInsight: string[];
   suggestionsForParent: string[];
   nextBuildIdeas: string[];
   note?: string;
+  sessionId: string;
 }
 
 export default function App() {
@@ -48,14 +57,6 @@ export default function App() {
 
   const handleStart = () => { setApiError(null); setAppState('upload'); };
 
-  const formatErrorMessage = (data: any, fallback = 'Something went wrong.') => {
-    if (!data) return fallback;
-    if (typeof data === 'string') return data;
-    if (data.details) return data.details;
-    if (data.error) return data.error;
-    return fallback;
-  };
-
   const handleImageCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -78,16 +79,20 @@ export default function App() {
       const data = await res.json().catch(() => null);
 
       if (!res.ok) {
-        throw new Error(formatErrorMessage(data, `Server error ${res.status}`));
+        throw new Error(data?.error || `Server error ${res.status}`);
       }
 
       setAnalysisResult({
-        celebrationMessage: data.celebration_message || 'Wonderful effort! Your child is learning through creative play.',
-        whatWeNoticed:       Array.isArray(data.what_we_noticed)       ? data.what_we_noticed       : [],
-        creativityInsight:   Array.isArray(data.creativity_insight)    ? data.creativity_insight    : [],
-        suggestionsForParent:Array.isArray(data.suggestions_for_parent)? data.suggestions_for_parent: [],
-        nextBuildIdeas:      Array.isArray(data.next_build_ideas)      ? data.next_build_ideas      : [],
-        note: data.note || '',
+        imageStatus:          data.imageStatus || 'valid',
+        buildGuessTitle:      data.buildGuess?.title    || 'Creative Build',
+        buildGuessSubtitle:   data.buildGuess?.subtitle || '',
+        whatWeFoundSummary:   data.whatWeFound?.summary || '',
+        whatTheyLearned:      Array.isArray(data.whatTheyLearned)      ? data.whatTheyLearned      : [],
+        whatWeNoticed:        Array.isArray(data.whatWeNoticed)        ? data.whatWeNoticed        : [],
+        suggestionsForParent: Array.isArray(data.suggestionsForParent) ? data.suggestionsForParent : [],
+        nextBuildIdeas:       Array.isArray(data.nextBuildIdeas)       ? data.nextBuildIdeas       : [],
+        note:      data.note || '',
+        sessionId: data.session_id || '',
       });
 
       setAppState('results');
@@ -105,6 +110,12 @@ export default function App() {
     setAppState('home');
   };
 
+  const colorMap = {
+    cream: { wrapper: 'bg-[#FFF9F2] border-amber-100',   icon: 'bg-amber-100 text-amber-700' },
+    green: { wrapper: 'bg-[#F0FDF4] border-emerald-100', icon: 'bg-emerald-100 text-emerald-700' },
+    blue:  { wrapper: 'bg-[#EFF6FF] border-blue-100',    icon: 'bg-blue-100 text-blue-700' },
+  };
+
   const renderBulletCard = (
     title: string,
     items: string[],
@@ -114,11 +125,7 @@ export default function App() {
   ) => {
     if (!items || items.length === 0) return null;
     return (
-      <motion.div
-        initial={{ opacity: 0, x: -16 }}
-        animate={{ opacity: 1, x: 0 }}
-        className={`${wrapperClass} p-4 rounded-2xl flex gap-4 items-start border`}
-      >
+      <motion.div initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} className={`${wrapperClass} p-4 rounded-2xl flex gap-4 items-start border`}>
         <div className={`${iconClass} p-2 rounded-xl shrink-0`}>{icon}</div>
         <div className="w-full">
           <h4 className="font-bold text-gray-800 text-sm">{title}</h4>
@@ -138,7 +145,6 @@ export default function App() {
   return (
     <div className="min-h-screen bg-[#FFF9F2] text-[#2D3748] overflow-x-hidden" style={{ fontFamily: 'Quicksand, sans-serif' }}>
 
-      {/* Header */}
       <header className="w-full px-5 py-4 flex items-center justify-between bg-white relative z-10 border-b border-gray-100">
         <div className="flex items-center gap-2 cursor-pointer -ml-2" onClick={handleReset}>
           <img src={troyLogo} alt="Troy Logo" className="h-[56px] w-auto object-contain" />
@@ -148,30 +154,27 @@ export default function App() {
         </button>
       </header>
 
-      {/* Mobile Drawer */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setIsMobileMenuOpen(false)} className="fixed inset-0 bg-black/40 z-40" />
-            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="fixed top-0 right-0 h-full w-[80%] max-w-[320px] min-w-[300px] bg-[#F2B705] z-50 flex flex-col rounded-none shadow-none">
+            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 25, stiffness: 200 }} className="fixed top-0 right-0 h-full w-[80%] max-w-[320px] min-w-[300px] bg-[#F2B705] z-50 flex flex-col">
               <div className="absolute top-6 right-6">
-                <button onClick={() => setIsMobileMenuOpen(false)} className="text-[#6B6B6B] hover:opacity-80 transition-colors p-2 flex items-center justify-center min-h-[44px] min-w-[44px]">
+                <button onClick={() => setIsMobileMenuOpen(false)} className="text-[#6B6B6B] p-2 flex items-center justify-center min-h-[44px] min-w-[44px]">
                   <X size={24} strokeWidth={1.5} />
                 </button>
               </div>
               <div className="flex flex-col pt-[120px] pl-[32px] gap-8">
-                <a href="#" className="font-sans font-medium text-[#8A6A2F] uppercase tracking-[0.5px] leading-[1.4] min-h-[44px] flex items-center w-fit">
-                  <span className="border-b-2 border-[#8A6A2F] pb-0.5">HOME</span>
-                </a>
-                <a href="#" className="font-sans font-medium text-white uppercase tracking-[0.5px] leading-[1.4] min-h-[44px] flex items-center hover:opacity-80 transition-opacity w-fit">TROY FUN CENTER</a>
-                <a href="#" className="font-sans font-medium text-white uppercase tracking-[0.5px] leading-[1.4] min-h-[44px] flex items-center hover:opacity-80 transition-opacity w-fit">PARTIES</a>
-                <a href="#" className="font-sans font-medium text-white uppercase tracking-[0.5px] leading-[1.4] min-h-[44px] flex items-center hover:opacity-80 transition-opacity w-fit">BUY</a>
-                <a href="#" className="font-sans font-medium text-white uppercase tracking-[0.5px] leading-[1.4] min-h-[44px] flex items-center hover:opacity-80 transition-opacity w-fit">ABOUT US</a>
-                <a href="#" className="font-sans font-medium text-white uppercase tracking-[0.5px] leading-[1.4] min-h-[44px] flex items-center hover:opacity-80 transition-opacity w-fit">CONTACT</a>
+                <a href="#" className="font-sans font-medium text-[#8A6A2F] uppercase tracking-[0.5px] min-h-[44px] flex items-center w-fit"><span className="border-b-2 border-[#8A6A2F] pb-0.5">HOME</span></a>
+                <a href="#" className="font-sans font-medium text-white uppercase tracking-[0.5px] min-h-[44px] flex items-center hover:opacity-80 w-fit">TROY FUN CENTER</a>
+                <a href="#" className="font-sans font-medium text-white uppercase tracking-[0.5px] min-h-[44px] flex items-center hover:opacity-80 w-fit">PARTIES</a>
+                <a href="#" className="font-sans font-medium text-white uppercase tracking-[0.5px] min-h-[44px] flex items-center hover:opacity-80 w-fit">BUY</a>
+                <a href="#" className="font-sans font-medium text-white uppercase tracking-[0.5px] min-h-[44px] flex items-center hover:opacity-80 w-fit">ABOUT US</a>
+                <a href="#" className="font-sans font-medium text-white uppercase tracking-[0.5px] min-h-[44px] flex items-center hover:opacity-80 w-fit">CONTACT</a>
               </div>
               <div className="mt-auto pb-[40px] flex flex-col items-center justify-center gap-2 w-full">
                 <Phone size={24} strokeWidth={1.5} className="text-white" />
-                <a href="tel:9901540581" className="text-white font-sans font-medium text-lg tracking-[0.5px] min-h-[44px] flex items-center justify-center">9901540581</a>
+                <a href="tel:9901540581" className="text-white font-sans font-medium text-lg min-h-[44px] flex items-center justify-center">9901540581</a>
               </div>
             </motion.div>
           </>
@@ -182,10 +185,10 @@ export default function App() {
 
         {/* HOME */}
         {appState === 'home' && (
-          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="flex-1 flex flex-col items-center justify-center text-center gap-8">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="flex-1 flex flex-col items-center justify-center text-center gap-8">
             <div className="space-y-3 px-2">
               <h1 className="text-[32px] font-bold text-[#AE6A1C] leading-[1.2] tracking-tight">
-                Discover the <span className="text-[#AE6A1C] relative">magic<svg className="absolute w-full h-2 -bottom-1 left-0 text-[#AE6A1C]/30" viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0,10 Q50,20 100,10" stroke="currentColor" strokeWidth="4" fill="transparent"/></svg></span> in their play
+                Discover the <span className="relative">magic<svg className="absolute w-full h-2 -bottom-1 left-0 text-[#AE6A1C]/30" viewBox="0 0 100 20" preserveAspectRatio="none"><path d="M0,10 Q50,20 100,10" stroke="currentColor" strokeWidth="4" fill="transparent"/></svg></span> in their play
               </h1>
               <p className="text-[15px] text-[#4A4A4A] leading-relaxed">Snap a photo of your child's Troy block creation and let our AI reveal the hidden engineering and learning principles behind it.</p>
             </div>
@@ -212,11 +215,7 @@ export default function App() {
               <h2 className="text-2xl font-bold text-[#AE6A1C]">Take a Photo</h2>
               <p className="text-sm text-[#4A4A4A] px-4">Make sure the entire structure is visible and well-lit.</p>
             </div>
-
-            {apiError && (
-              <div className="w-full bg-red-50 border border-red-200 text-red-600 rounded-2xl p-3 text-sm font-semibold whitespace-pre-wrap">{apiError}</div>
-            )}
-
+            {apiError && <div className="w-full bg-red-50 border border-red-200 text-red-600 rounded-2xl p-3 text-sm font-semibold">{apiError}</div>}
             <div className="w-full aspect-[4/5] bg-white rounded-3xl border-4 border-dashed border-[#AE6A1C]/30 flex flex-col items-center justify-center p-6 relative overflow-hidden group hover:border-[#AE6A1C] transition-colors cursor-pointer">
               <input type="file" accept="image/*" capture="environment" onChange={handleImageCapture} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
               <div className="w-20 h-20 bg-[#AE6A1C]/10 text-[#AE6A1C] rounded-full flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
@@ -252,31 +251,53 @@ export default function App() {
         {appState === 'results' && analysisResult && (
           <motion.div initial={{ opacity: 0, y: 40 }} animate={{ opacity: 1, y: 0 }} className="flex-1 flex flex-col gap-6 pb-12">
 
-            {/* Photo — no Age badge */}
             <div className="w-full h-56 sm:h-64 rounded-3xl overflow-hidden border-4 border-white shadow-xl relative shrink-0">
               {capturedImage && <img src={capturedImage} alt="Result" className="w-full h-full object-cover" />}
               <div className="absolute top-3 left-3 bg-white/95 backdrop-blur-sm px-3 py-1.5 rounded-full font-bold text-xs text-[#AE6A1C] shadow-sm flex items-center gap-1.5">
-                <Building2 size={14} /> Structure Identified
+                <Building2 size={14} /> {analysisResult.imageStatus === 'valid' ? 'Structure Identified' : 'Image Unclear'}
               </div>
             </div>
 
-            {/* Results card */}
             <div className="bg-white rounded-3xl p-5 shadow-sm border border-amber-100 space-y-4">
 
-              {/* Celebration message — big, no label */}
+              {/* Build guess — big title */}
               <div className="border-b border-gray-100 pb-4">
-                <h2 className="text-2xl font-extrabold text-[#AE6A1C] leading-snug">
-                  {analysisResult.celebrationMessage}
-                </h2>
+                <h2 className="text-2xl font-extrabold text-[#AE6A1C] leading-snug">{analysisResult.buildGuessTitle}</h2>
+                {analysisResult.buildGuessSubtitle ? (
+                  <p className="text-sm text-gray-600 mt-1 leading-relaxed">{analysisResult.buildGuessSubtitle}</p>
+                ) : null}
               </div>
 
-              <h3 className="font-bold text-base text-[#AE6A1C] flex items-center gap-2">
-                <Brain size={18} /> What we found
-              </h3>
+              {/* What we found summary */}
+              {analysisResult.whatWeFoundSummary ? (
+                <div className="bg-[#FFF3E0] p-4 rounded-2xl border border-amber-100">
+                  <h4 className="font-bold text-gray-800 text-sm mb-1 flex items-center gap-2"><Brain size={15} /> What we found</h4>
+                  <p className="text-sm text-gray-600 leading-relaxed">{analysisResult.whatWeFoundSummary}</p>
+                </div>
+              ) : null}
 
-              {renderBulletCard('What we noticed',        analysisResult.whatWeNoticed,        <Eye size={18} />,      'bg-[#FFF9F2] border-amber-100',    'bg-amber-100 text-amber-700')}
-              {renderBulletCard('Creativity insight',     analysisResult.creativityInsight,    <Sparkles size={18} />, 'bg-[#F0FDF4] border-emerald-100',  'bg-emerald-100 text-emerald-700')}
-              {renderBulletCard('Suggestions for parent', analysisResult.suggestionsForParent, <Lightbulb size={18} />,'bg-[#EFF6FF] border-blue-100',     'bg-blue-100 text-blue-700')}
+              {/* What they learned — colored cards */}
+              {analysisResult.whatTheyLearned.length > 0 && (
+                <div className="space-y-3">
+                  <h3 className="font-bold text-sm text-[#AE6A1C] flex items-center gap-2"><Sparkles size={15} /> What they learned</h3>
+                  {analysisResult.whatTheyLearned.map((item, idx) => {
+                    const c = colorMap[item.color] || colorMap.cream;
+                    return (
+                      <motion.div key={idx} initial={{ opacity: 0, x: -16 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: idx * 0.08 }} className={`${c.wrapper} p-4 rounded-2xl flex gap-4 items-start border`}>
+                        <div className={`${c.icon} p-2 rounded-xl shrink-0 text-sm font-bold`}>{idx + 1}</div>
+                        <div>
+                          <h4 className="font-bold text-gray-800 text-sm">{item.title}</h4>
+                          <p className="text-sm text-gray-600 mt-1 leading-relaxed">{item.description}</p>
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+
+              {/* What we noticed (invalid image) */}
+              {renderBulletCard('What we noticed',        analysisResult.whatWeNoticed,        <Eye size={18} />,       'bg-[#FFF9F2] border-amber-100',   'bg-amber-100 text-amber-700')}
+              {renderBulletCard('Suggestions for parent', analysisResult.suggestionsForParent, <Lightbulb size={18} />, 'bg-[#EFF6FF] border-blue-100',    'bg-blue-100 text-blue-700')}
               {renderBulletCard('Next build ideas',       analysisResult.nextBuildIdeas,       <ArrowRight size={18} />,'bg-[#FDF4FF] border-fuchsia-100', 'bg-fuchsia-100 text-fuchsia-700')}
 
               {analysisResult.note ? (
@@ -287,12 +308,9 @@ export default function App() {
               ) : null}
             </div>
 
-            {/* Buttons */}
             <div className="flex gap-3 pt-2">
-              <button onClick={handleReset} className="flex-1 bg-white border-2 border-amber-200 text-amber-700 font-bold py-3.5 rounded-2xl shadow-sm hover:bg-amber-50 active:bg-amber-100 transition-colors text-sm">
-                Scan Another
-              </button>
-              <button className="flex-1 bg-amber-500 hover:bg-amber-600 active:bg-amber-700 text-white font-bold py-3.5 rounded-2xl shadow-[0_4px_0_0_#b45309] hover:shadow-[0_2px_0_0_#b45309] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 text-sm">
+              <button onClick={handleReset} className="flex-1 bg-white border-2 border-amber-200 text-amber-700 font-bold py-3.5 rounded-2xl shadow-sm hover:bg-amber-50 transition-colors text-sm">Scan Another</button>
+              <button className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-2xl shadow-[0_4px_0_0_#b45309] hover:shadow-[0_2px_0_0_#b45309] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 text-sm">
                 Save Memory <ArrowRight size={18} />
               </button>
             </div>
@@ -301,11 +319,10 @@ export default function App() {
 
       </main>
 
-      {/* Contact Modal */}
       {isContactModalOpen && (
         <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
           <motion.div initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} className="bg-white rounded-3xl p-6 w-full max-w-sm shadow-2xl relative">
-            <button onClick={() => setIsContactModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full p-2 transition-colors"><X size={20} /></button>
+            <button onClick={() => setIsContactModalOpen(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 bg-gray-100 rounded-full p-2"><X size={20} /></button>
             <h3 className="text-2xl font-bold text-[#AE6A1C] mb-2">Get in touch</h3>
             <p className="text-gray-600 mb-6 text-sm">Have questions about Troy blocks? We'd love to help!</p>
             <div className="space-y-3">
