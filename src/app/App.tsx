@@ -17,6 +17,13 @@ interface WhatTheyLearned {
   color: 'cream' | 'green' | 'blue';
 }
 
+interface TroyThinkingMeter {
+  creativity: number;
+  problemSolving: number;
+  spatialSkills: number;
+  focus: number;
+}
+
 interface AnalysisResult {
   imageStatus: 'valid' | 'invalid';
   buildGuessTitle: string;
@@ -26,6 +33,7 @@ interface AnalysisResult {
   whatWeNoticed: string[];
   suggestionsForParent: string[];
   nextBuildIdeas: string[];
+  troyThinkingMeter: TroyThinkingMeter | null;
   note?: string;
   sessionId: string;
 }
@@ -91,6 +99,7 @@ export default function App() {
         whatWeNoticed:        Array.isArray(data.whatWeNoticed)        ? data.whatWeNoticed        : [],
         suggestionsForParent: Array.isArray(data.suggestionsForParent) ? data.suggestionsForParent : [],
         nextBuildIdeas:       Array.isArray(data.nextBuildIdeas)       ? data.nextBuildIdeas       : [],
+        troyThinkingMeter: data.troyThinkingMeter || null,
         note:      data.note || '',
         sessionId: data.session_id || '',
       });
@@ -299,6 +308,34 @@ export default function App() {
               {renderBulletCard('What we noticed',        analysisResult.whatWeNoticed,        <Eye size={18} />,       'bg-[#FFF9F2] border-amber-100',   'bg-amber-100 text-amber-700')}
               {renderBulletCard('Suggestions for parent', analysisResult.suggestionsForParent, <Lightbulb size={18} />, 'bg-[#EFF6FF] border-blue-100',    'bg-blue-100 text-blue-700')}
               {renderBulletCard('Next build ideas',       analysisResult.nextBuildIdeas,       <ArrowRight size={18} />,'bg-[#FDF4FF] border-fuchsia-100', 'bg-fuchsia-100 text-fuchsia-700')}
+
+              {/* Troy Thinking Meter */}
+              {analysisResult.troyThinkingMeter && (
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-[#FFF9F2] border border-amber-100 p-4 rounded-2xl space-y-3">
+                  <h3 className="font-bold text-sm text-[#AE6A1C] flex items-center gap-2">
+                    <span>⭐</span> Troy Thinking Meter
+                  </h3>
+                  {[
+                    { label: 'Creativity',      key: 'creativity' },
+                    { label: 'Problem Solving', key: 'problemSolving' },
+                    { label: 'Spatial Skills',  key: 'spatialSkills' },
+                    { label: 'Focus',           key: 'focus' },
+                  ].map(({ label, key }) => {
+                    const score = analysisResult.troyThinkingMeter![key as keyof TroyThinkingMeter];
+                    return (
+                      <div key={key} className="flex items-center justify-between gap-3">
+                        <span className="text-sm font-semibold text-gray-700 w-32 shrink-0">{label}</span>
+                        <div className="flex gap-1">
+                          {[1,2,3,4,5,6].map(i => (
+                            <span key={i} className={`text-lg ${i <= score ? 'text-amber-400' : 'text-gray-200'}`}>★</span>
+                          ))}
+                        </div>
+                        <span className="text-xs font-bold text-gray-400 w-8 text-right">{score}/6</span>
+                      </div>
+                    );
+                  })}
+                </motion.div>
+              )}
 
               {analysisResult.note ? (
                 <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-2xl">
