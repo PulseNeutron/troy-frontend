@@ -65,6 +65,54 @@ export default function App() {
 
   const handleStart = () => { setApiError(null); setAppState('upload'); };
 
+  const compressImage = (file: File): Promise<Blob> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      const url = URL.createObjectURL(file);
+      img.onload = () => {
+        const MAX = 1200;
+        let w = img.width, h = img.height;
+        if (w > MAX || h > MAX) {
+          if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+          else { w = Math.round(w * MAX / h); h = MAX; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        canvas.getContext('2d')!.drawImage(img, 0, 0, w, h);
+        canvas.toBlob((blob) => resolve(blob!), 'image/jpeg', 0.82);
+        URL.revokeObjectURL(url);
+      };
+      img.src = url;
+    });
+  };
+
+  const handleDownloadCard = () => {
+    if (!capturedImage || !analysisResult) return;
+    const canvas = document.createElement('canvas');
+    canvas.width = 800; canvas.height = 500;
+    const ctx = canvas.getContext('2d')!;
+    const img = new Image();
+    img.onload = () => {
+      ctx.fillStyle = '#FFF9F2';
+      ctx.fillRect(0, 0, 800, 500);
+      ctx.drawImage(img, 0, 0, 340, 500);
+      ctx.fillStyle = '#AE6A1C';
+      ctx.font = 'bold 28px sans-serif';
+      ctx.fillText(analysisResult.buildGuessTitle, 360, 60);
+      ctx.fillStyle = '#4A4A4A';
+      ctx.font = '18px sans-serif';
+      ctx.fillText(analysisResult.buildGuessSubtitle, 360, 95);
+      ctx.fillStyle = '#AE6A1C';
+      ctx.font = 'bold 16px sans-serif';
+      ctx.fillText('Troy AI Analyzer', 360, 460);
+      const link = document.createElement('a');
+      link.download = 'troy-creation.png';
+      link.href = canvas.toDataURL();
+      link.click();
+    };
+    img.src = capturedImage;
+  };
+
   const handleImageCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
@@ -75,8 +123,9 @@ export default function App() {
     setAppState('analyzing');
 
     try {
+      const compressed = await compressImage(file);
       const formData = new FormData();
-      formData.append('image', file);
+      formData.append('image', compressed, 'photo.jpg');
       formData.append('age', '6');
 
       const res = await fetch(`${API_BASE}/analyze`, {
@@ -347,8 +396,8 @@ export default function App() {
 
             <div className="flex gap-3 pt-2">
               <button onClick={handleReset} className="flex-1 bg-white border-2 border-amber-200 text-amber-700 font-bold py-3.5 rounded-2xl shadow-sm hover:bg-amber-50 transition-colors text-sm">Scan Another</button>
-              <button className="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-2xl shadow-[0_4px_0_0_#b45309] hover:shadow-[0_2px_0_0_#b45309] hover:translate-y-[2px] transition-all flex items-center justify-center gap-2 text-sm">
-                Save Memory <ArrowRight size={18} />
+              <button onClick={handleDownloadCard} className="flex-1 bg-white border-2 border-amber-200 text-amber-700 font-bold py-3.5 rounded-2xl shadow-sm hover:bg-amber-50 transition-colors text-sm flex items-center justify-center gap-2">
+                ⬇ Download Card
               </button>
             </div>
           </motion.div>
