@@ -87,30 +87,12 @@ export default function App() {
   };
 
   const handleDownloadCard = () => {
-    if (!capturedImage || !analysisResult) return;
-    const canvas = document.createElement('canvas');
-    canvas.width = 800; canvas.height = 500;
-    const ctx = canvas.getContext('2d')!;
-    const img = new Image();
-    img.onload = () => {
-      ctx.fillStyle = '#FFF9F2';
-      ctx.fillRect(0, 0, 800, 500);
-      ctx.drawImage(img, 0, 0, 340, 500);
-      ctx.fillStyle = '#AE6A1C';
-      ctx.font = 'bold 28px sans-serif';
-      ctx.fillText(analysisResult.buildGuessTitle, 360, 60);
-      ctx.fillStyle = '#4A4A4A';
-      ctx.font = '18px sans-serif';
-      ctx.fillText(analysisResult.buildGuessSubtitle, 360, 95);
-      ctx.fillStyle = '#AE6A1C';
-      ctx.font = 'bold 16px sans-serif';
-      ctx.fillText('Troy AI Analyzer', 360, 460);
-      const link = document.createElement('a');
-      link.download = 'troy-creation.png';
-      link.href = canvas.toDataURL();
-      link.click();
-    };
-    img.src = capturedImage;
+    if (!analysisResult?.sessionId) {
+      alert('No feedback card available yet. Please analyze an image first.');
+      return;
+    }
+    const downloadUrl = `${API_BASE}/download-card/${analysisResult.sessionId}`;
+    window.open(downloadUrl, '_blank');
   };
 
   const handleImageCapture = async (e: React.ChangeEvent<HTMLInputElement>) => {
