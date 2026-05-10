@@ -17,11 +17,15 @@ interface WhatTheyLearned {
   color: 'cream' | 'green' | 'blue';
 }
 
+interface MeterField { score: number; reason: string; }
+
 interface TroyThinkingMeter {
-  creativity: number;
-  problemSolving: number;
-  spatialSkills: number;
-  focus: number;
+  symmetry:       MeterField;
+  creativity:     MeterField;
+  spatialSkills:  MeterField;
+  stability:      MeterField;
+  problemSolving: MeterField;
+  focusAndDetail: MeterField;
 }
 
 interface AnalysisResult {
@@ -342,26 +346,33 @@ export default function App() {
 
               {/* Troy Thinking Meter */}
               {analysisResult.troyThinkingMeter && (
-                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-[#FFF9F2] border border-amber-100 p-4 rounded-2xl space-y-3">
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-[#FFF9F2] border border-amber-100 p-4 rounded-2xl space-y-4">
                   <h3 className="font-bold text-sm text-[#AE6A1C] flex items-center gap-2">
                     <span>⭐</span> Troy Thinking Meter
                   </h3>
                   {[
+                    { label: 'Symmetry',        key: 'symmetry' },
                     { label: 'Creativity',      key: 'creativity' },
-                    { label: 'Problem Solving', key: 'problemSolving' },
                     { label: 'Spatial Skills',  key: 'spatialSkills' },
-                    { label: 'Focus',           key: 'focus' },
+                    { label: 'Stability',       key: 'stability' },
+                    { label: 'Problem Solving', key: 'problemSolving' },
+                    { label: 'Focus & Detail',  key: 'focusAndDetail' },
                   ].map(({ label, key }) => {
-                    const score = analysisResult.troyThinkingMeter![key as keyof TroyThinkingMeter];
+                    const field = analysisResult.troyThinkingMeter![key as keyof TroyThinkingMeter];
+                    const score = Math.max(1, Math.min(5, Number(field?.score || 1)));
+                    const reason = field?.reason || '';
                     return (
-                      <div key={key} className="flex items-center justify-between gap-3">
-                        <span className="text-sm font-semibold text-gray-700 w-32 shrink-0">{label}</span>
-                        <div className="flex gap-1">
-                          {[1,2,3,4,5,6].map(i => (
-                            <span key={i} className={`text-lg ${i <= score ? 'text-amber-400' : 'text-gray-200'}`}>★</span>
-                          ))}
+                      <div key={key} className="space-y-1">
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="text-sm font-semibold text-gray-700 w-32 shrink-0">{label}</span>
+                          <div className="flex gap-1">
+                            {[1,2,3,4,5].map(i => (
+                              <span key={i} className={`text-xl ${i <= score ? 'text-amber-400' : 'text-gray-200'}`}>★</span>
+                            ))}
+                          </div>
+                          <span className="text-xs font-bold text-gray-400 w-8 text-right">{score}/5</span>
                         </div>
-                        <span className="text-xs font-bold text-gray-400 w-8 text-right">{score}/6</span>
+                        {reason ? <p className="text-xs text-gray-500 leading-relaxed pl-1">{reason}</p> : null}
                       </div>
                     );
                   })}
